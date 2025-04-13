@@ -1,0 +1,26 @@
+services:
+  lucia:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ${APP_NAME}-${ENV_NAME}
+    image: ${APP_NAME}:${ENV_NAME}
+    ports:
+      - "${EXTERNAL_PORT}:${APP_PORT}"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - shin-network
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "0.2"
+    #       memory: "256M"
+    #     reservations:
+    #       cpus: "0.1"
+    #       memory: "128M"
+
+networks:
+  shin-network:
+    external: true

@@ -1,0 +1,30 @@
+FROM maven:3.8.5-openjdk-17-slim@sha256:5ba3fae0f77cbe08deac4984dfa4f5397345d5ba8221871285a96e2ef8f16808 AS build
+
+LABEL stage="build"
+
+WORKDIR /build
+
+COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw .
+
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+FROM openjdk:17.0.2-slim-bullseye@sha256:779635c0c3d23cc8dbab2d8c1ee4cf2a9202e198dfc8f4c0b279824d9b8e0f22 AS deploy
+
+LABEL maintainer="Luis Eduardo Alencar Melo <luiseduardoalencarmelo@gmail.com>" \
+        dev="Luis Eduardo Alencar Melo" \
+        devops="Pedro Mateus Cunha Pimentel <pedromcpimentel@gmail.com>" \
+        project="shin"
+
+RUN useradd --system --create-home --shell /bin/false appuser
+
+WORKDIR /app
+
+COPY --from=build /build/target/*.jar app.jar
+
+# USER appuser
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

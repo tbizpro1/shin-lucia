@@ -1,0 +1,22 @@
+services:
+  lucia:
+    image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    container_name: shin-lucia-prod
+    ports:
+      - 8084:8084
+    env_file:
+      - .env
+    networks:
+      - shin-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.2"
+          memory: "256M"
+
+networks:
+  shin-network:
+    external: true
