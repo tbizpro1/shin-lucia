@@ -25,37 +25,16 @@ public class LuciaResponseController {
     private final JwtService jwtService;
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public LuciaResponseResponse createWithFile(
-            @RequestPart("data") LuciaResponseRequest request,
-            @RequestPart("file") MultipartFile file,
-            HttpServletRequest httpRequest
+    @PutMapping("/idea/{ideaId}/step/{step}")
+    public LuciaResponseResponse uploadStepResponseAsText(
+            @PathVariable Long ideaId,
+            @PathVariable Double step,
+            @RequestBody Map<String, Object> data,
+            HttpServletRequest request
     ) throws IOException {
-        String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = request.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
-        return responseService.createWithFile(request, file, username);
-    }
-
-    @PreAuthorize("isAuthenticated()")
-    @PutMapping("/{id}")
-    public LuciaResponseResponse update(
-            @PathVariable Long id,
-            @RequestBody LuciaResponseRequest request
-    ) {
-        return responseService.update(id, request);
-    }
-
-    @PreAuthorize("isAuthenticated()")
-    @PutMapping(value = "/{id}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public LuciaResponseResponse updateWithFile(
-            @PathVariable Long id,
-            @RequestPart(value = "data", required = false) LuciaResponseRequest request,
-            @RequestPart("file") MultipartFile file,
-            HttpServletRequest httpRequest
-    ) throws IOException {
-        String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
-        String username = jwtService.extractUsername(token);
-        return responseService.updateWithFile(id, request, file, username);
+        return responseService.uploadResponseAsTxt(ideaId, step, data, username);
     }
 
     @PreAuthorize("isAuthenticated()")

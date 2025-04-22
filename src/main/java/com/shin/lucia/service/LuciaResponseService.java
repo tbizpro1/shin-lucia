@@ -1,6 +1,6 @@
 package com.shin.lucia.service;
 
-import com.shin.lucia.dto.LuciaResponseRequest;
+import com.shin.lucia.client.UserClient;
 import com.shin.lucia.dto.LuciaResponseResponse;
 import com.shin.lucia.entity.LuciaIdea;
 import com.shin.lucia.entity.LuciaResponse;
@@ -12,9 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,89 +26,46 @@ public class LuciaResponseService {
     private final LuciaResponseRepository repository;
     private final LuciaIdeaRepository ideaRepository;
     private final S3LuciaStorageService s3StorageService;
+    private final UserClient userClient;
+
 
     @Transactional
-    public LuciaResponseResponse create(LuciaResponseRequest request) {
+    public LuciaResponseResponse uploadResponseAsTxt(Long ideaId, Double step, Map<String, Object> data, String username) {
         try {
-            LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
+            LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
-            LuciaResponse response = LuciaResponseMapper.toEntity(request, idea);
-            return LuciaResponseMapper.toResponse(repository.save(response));
-        } catch (Exception e) {
-            log.error("Erro ao criar resposta: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao criar resposta");
-        }
-    }
 
-    @Transactional
-    public LuciaResponseResponse createWithFile(LuciaResponseRequest request, MultipartFile file, String username) {
-        try {
-            LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
-
-            String ideaTitle = idea.getTitle();
-            String fileUrl = s3StorageService.uploadLuciaFile(file, username, "responses", ideaTitle);
-
-            request.setObjectName(file.getOriginalFilename());
-            request.setUrlHistory(fileUrl);
-
-            LuciaResponse response = LuciaResponseMapper.toEntity(request, idea);
-            return LuciaResponseMapper.toResponse(repository.save(response));
-        } catch (Exception e) {
-            log.error("Erro ao criar resposta com upload: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao criar resposta com upload");
-        }
-    }
+            Long userId = userClient.findIdByUsername(username);
 
 
-    @Transactional
-    public LuciaResponseResponse update(Long id, LuciaResponseRequest request) {
-        try {
-            LuciaResponse response = repository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Resposta não encontrada"));
+            String content = data.toString();
+            String fileName = "step-" + step + ".txt";
+            byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
 
-            if (request.getContent() != null) response.setContent(request.getContent());
-            if (request.getRelatedStep() != null) response.setRelatedStep(request.getRelatedStep());
-            if (request.getAuthor() != null) response.setAuthor(request.getAuthor());
-            if (request.getObjectName() != null) response.setObjectName(request.getObjectName());
-            if (request.getUrlHistory() != null) response.setUrlHistory(request.getUrlHistory());
+            repository.findByIdeaAndRelatedStep(idea, step).ifPresent(existing -> {
+                if (existing.getUrlHistory() != null) {
+                    s3StorageService.deleteFile(existing.getUrlHistory());
+                }
+            });
 
-            return LuciaResponseMapper.toResponse(repository.save(response));
-        } catch (Exception e) {
-            log.error("Erro ao atualizar resposta: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar resposta");
-        }
-    }
+            String fileUrl = s3StorageService.uploadLuciaResponseFile(contentBytes, fileName, userId, ideaId);
 
-    @Transactional
-    public LuciaResponseResponse updateWithFile(Long id, LuciaResponseRequest request, MultipartFile file, String username) {
-        try {
-            LuciaResponse response = repository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Resposta não encontrada"));
+            LuciaResponse response = repository.findByIdeaAndRelatedStep(idea, step)
+                    .orElseGet(() -> LuciaResponse.builder().idea(idea).relatedStep(step).build());
 
-            LuciaIdea idea = response.getIdea();
-            String ideaTitle = idea.getTitle();
-
-            s3StorageService.deleteFile(response.getUrlHistory());
-            String fileUrl = s3StorageService.uploadLuciaFile(file, username, "responses", ideaTitle);
-
-            response.setObjectName(file.getOriginalFilename());
             response.setUrlHistory(fileUrl);
-
-            if (request != null) {
-                if (request.getContent() != null) response.setContent(request.getContent());
-                if (request.getRelatedStep() != null) response.setRelatedStep(request.getRelatedStep());
-                if (request.getAuthor() != null) response.setAuthor(request.getAuthor());
-            }
+            response.setObjectName(fileName);
+            response.setContent(content);
+            response.setAuthor(username);
 
             return LuciaResponseMapper.toResponse(repository.save(response));
+
         } catch (Exception e) {
-            log.error("Erro ao atualizar resposta com novo arquivo: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar resposta com novo arquivo");
+            log.error("Erro ao salvar resposta como txt: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao salvar resposta");
         }
     }
-
 
     @Transactional
     public void delete(Long id) {
