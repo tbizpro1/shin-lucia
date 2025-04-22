@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/lucia/summary")
@@ -22,38 +23,28 @@ public class LuciaSummaryController {
     private final LuciaSummaryService summaryService;
     private final JwtService jwtService;
 
+
     @PreAuthorize("isAuthenticated()")
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public LuciaSummaryResponse createWithFile(
-            @RequestPart("data") LuciaSummaryRequest request,
-            @RequestPart("file") MultipartFile file,
+    @PostMapping("/idea/{ideaId}/upload-json")
+    public LuciaSummaryResponse createSummaryFromJson(
+            @PathVariable Long ideaId,
+            @RequestBody Map<String, String> steps,
             HttpServletRequest httpRequest
     ) throws IOException {
         String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
-        return summaryService.createOrUpdateWithFile(request, file, username);
+        return summaryService.createSummaryFromJson(ideaId, steps, username);
     }
 
-    @PreAuthorize("isAuthenticated()")
-    @PutMapping("/{id}")
-    public LuciaSummaryResponse update(
-            @PathVariable Long id,
-            @RequestBody LuciaSummaryRequest request
-    ) {
-        return summaryService.update(id, request);
-    }
-
-    @PreAuthorize("isAuthenticated()")
-    @PutMapping(value = "/{id}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public LuciaSummaryResponse updateWithFile(
-            @PathVariable Long id,
-            @RequestPart(value = "data", required = false) LuciaSummaryRequest request,
-            @RequestPart("file") MultipartFile file,
+    @PutMapping("/idea/{ideaId}/upload-json")
+    public LuciaSummaryResponse updateSummaryFromJson(
+            @PathVariable Long ideaId,
+            @RequestBody Map<String, String> steps,
             HttpServletRequest httpRequest
     ) throws IOException {
         String token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
-        return summaryService.updateWithFile(id, request, file, username);
+        return summaryService.generateAndUploadSummaryFile(ideaId, steps, username);
     }
 
     @PreAuthorize("isAuthenticated()")

@@ -59,6 +59,26 @@ public class S3LuciaStorageService {
                 .toString();
     }
 
+    public String uploadLuciaGeneratedFile(byte[] content, String fileName, String username, String folder, String ideaTitle) {
+        String sanitizedTitle = sanitizeForS3Path(ideaTitle);
+        String key = String.format("lucia/%s/%s/%s/%s", folder, username, sanitizedTitle, fileName);
+
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(awsProperties.getS3().getBucket())
+                .key(key)
+                .contentType("text/plain")
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromBytes(content));
+
+        return s3Client.utilities()
+                .getUrl(b -> b
+                        .bucket(awsProperties.getS3().getBucket())
+                        .key(key))
+                .toString();
+    }
+
+
 
     public void deleteFile(String fileUrl) {
         if (fileUrl == null || fileUrl.isBlank()) return;

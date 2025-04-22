@@ -1,6 +1,5 @@
 package com.shin.lucia.service;
 
-import com.shin.lucia.dto.LuciaSummaryRequest;
 import com.shin.lucia.dto.LuciaSummaryResponse;
 import com.shin.lucia.entity.LuciaIdea;
 import com.shin.lucia.entity.LuciaSummaryIdeas;
@@ -15,6 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.UUID;
+
 
 @Slf4j
 @Service
@@ -26,94 +29,102 @@ public class LuciaSummaryService {
     private final LuciaSummaryIdeasRepository repository;
     private final LuciaIdeaRepository ideaRepository;
 
+
     @Transactional
-    public LuciaSummaryResponse createOrUpdate(LuciaSummaryRequest request) {
+    public LuciaSummaryResponse updateWithFile(Long ideaId, MultipartFile file, String username) {
         try {
-            LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
+            LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
             LuciaSummaryIdeas summary = repository.findByIdea(idea)
-                    .map(existing -> {
-                        existing.setObjectName(request.getObjectName());
-                        existing.setUrlFile(request.getUrlFile());
-                        return existing;
-                    }).orElseGet(() -> LuciaSummaryMapper.toEntity(request, idea));
-
-            return LuciaSummaryMapper.toResponse(repository.save(summary));
-        } catch (Exception e) {
-            log.error("Erro ao criar ou atualizar sumário: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao criar ou atualizar sumário");
-        }
-    }
-
-    @Transactional
-    public LuciaSummaryResponse createOrUpdateWithFile(LuciaSummaryRequest request, MultipartFile file, String username) {
-        try {
-            LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
-
-            String ideaTitle = idea.getTitle();
-            String fileUrl = s3StorageService.uploadLuciaFile(file, username, "summaries", ideaTitle);
-
-            request.setObjectName(file.getOriginalFilename());
-            request.setUrlFile(fileUrl);
-
-            LuciaSummaryIdeas summary = repository.findByIdea(idea)
-                    .map(existing -> {
-                        existing.setObjectName(request.getObjectName());
-                        existing.setUrlFile(request.getUrlFile());
-                        return existing;
-                    }).orElseGet(() -> LuciaSummaryMapper.toEntity(request, idea));
-
-            return LuciaSummaryMapper.toResponse(repository.save(summary));
-        } catch (Exception e) {
-            log.error("Erro ao criar ou atualizar sumário com upload: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao criar ou atualizar sumário com upload");
-        }
-    }
-
-
-    @Transactional
-    public LuciaSummaryResponse update(Long id, LuciaSummaryRequest request) {
-        try {
-            LuciaSummaryIdeas summary = repository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Sumário não encontrado"));
-
-            if (request.getUrlFile() != null) summary.setUrlFile(request.getUrlFile());
-            if (request.getObjectName() != null) summary.setObjectName(request.getObjectName());
-
-            return LuciaSummaryMapper.toResponse(repository.save(summary));
-        } catch (Exception e) {
-            log.error("Erro ao atualizar sumário: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar sumário");
-        }
-    }
-
-    @Transactional
-    public LuciaSummaryResponse updateWithFile(Long id, LuciaSummaryRequest request, MultipartFile file, String username) {
-        try {
-            LuciaSummaryIdeas summary = repository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Sumário não encontrado"));
-
-            LuciaIdea idea = summary.getIdea();
-            String ideaTitle = idea.getTitle();
+                    .orElseGet(() -> LuciaSummaryIdeas.builder().idea(idea).build());
 
             s3StorageService.deleteFile(summary.getUrlFile());
-            String fileUrl = s3StorageService.uploadLuciaFile(file, username, "summaries", ideaTitle);
+
+            String fileUrl = s3StorageService.uploadLuciaFile(file, username, "summaries", idea.getTitle());
 
             summary.setObjectName(file.getOriginalFilename());
             summary.setUrlFile(fileUrl);
 
-            if (request != null && request.getObjectName() != null) {
-                summary.setObjectName(request.getObjectName());
-            }
+            return LuciaSummaryMapper.toResponse(repository.save(summary));
+        } catch (Exception e) {
+            log.error("Erro ao atualizar sumário acumulado: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar sumário acumulado");
+        }
+    }
+
+    @Transactional
+    public LuciaSummaryResponse generateAndUploadSummaryFile(Long ideaId, Map<String, String> steps, String username) {
+        try {
+            LuciaIdea idea = ideaRepository.findById(ideaId)
+                    .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
+
+            StringBuilder builder = new StringBuilder();
+            steps.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        builder.append("## ").append(entry.getKey().toUpperCase()).append("\n");
+                        builder.append(entry.getValue()).append("\n\n");
+                    });
+
+            byte[] contentBytes = builder.toString().getBytes(StandardCharsets.UTF_8);
+
+            String fileName = "summary-" + UUID.randomUUID() + ".txt";
+
+            LuciaSummaryIdeas summary = repository.findByIdea(idea)
+                    .orElseGet(() -> LuciaSummaryIdeas.builder().idea(idea).build());
+
+            s3StorageService.deleteFile(summary.getUrlFile());
+
+            String fileUrl = s3StorageService.uploadLuciaGeneratedFile(contentBytes, fileName, username, "summaries", idea.getTitle());
+
+            summary.setObjectName(fileName);
+            summary.setUrlFile(fileUrl);
 
             return LuciaSummaryMapper.toResponse(repository.save(summary));
         } catch (Exception e) {
-            log.error("Erro ao atualizar sumário com novo arquivo: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar sumário com novo arquivo");
+            log.error("Erro ao gerar/uploadar arquivo de resumo: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao gerar resumo");
         }
     }
+
+
+    @Transactional
+    public LuciaSummaryResponse createSummaryFromJson(Long ideaId, Map<String, String> steps, String username) {
+        try {
+            LuciaIdea idea = ideaRepository.findById(ideaId)
+                    .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
+
+            if (repository.findByIdea(idea).isPresent()) {
+                throw new IllegalStateException("Resumo já existe para esta ideia.");
+            }
+
+            StringBuilder builder = new StringBuilder();
+            steps.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        builder.append("## ").append(entry.getKey().toUpperCase()).append("\n");
+                        builder.append(entry.getValue()).append("\n\n");
+                    });
+
+            byte[] contentBytes = builder.toString().getBytes(StandardCharsets.UTF_8);
+            String fileName = "summary-" + UUID.randomUUID() + ".txt";
+
+            String fileUrl = s3StorageService.uploadLuciaGeneratedFile(contentBytes, fileName, username, "summaries", idea.getTitle());
+
+            LuciaSummaryIdeas summary = LuciaSummaryIdeas.builder()
+                    .idea(idea)
+                    .objectName(fileName)
+                    .urlFile(fileUrl)
+                    .build();
+
+            return LuciaSummaryMapper.toResponse(repository.save(summary));
+        } catch (Exception e) {
+            log.error("Erro ao criar resumo com JSON: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar resumo com JSON");
+        }
+    }
+
 
     @Transactional
     public void delete(Long id) {
