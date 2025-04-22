@@ -8,9 +8,12 @@ import com.shin.lucia.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -23,13 +26,41 @@ public class FileController {
     private final UserClient userClient;
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping
-    public FileResponse upload(@RequestBody FileRequest request, HttpServletRequest req) {
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FileResponse uploadFile(
+            @RequestPart("data") FileRequest request,
+            @RequestPart("file") MultipartFile file,
+            HttpServletRequest req
+    ) throws IOException {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
         Long userId = userClient.findIdByUsername(username);
-        return fileService.upload(request, userId);
+        return fileService.uploadFile(request, file, username, userId);
     }
+
+    @PutMapping("/{id}/data")
+    @PreAuthorize("isAuthenticated()")
+    public FileResponse updateFileData(
+            @PathVariable Long id,
+            @RequestBody FileRequest request
+    ) {
+        return fileService.updateFileData(id, request);
+    }
+
+    @PutMapping("/{id}/only-file")
+    @PreAuthorize("isAuthenticated()")
+    public FileResponse updateOnlyFile(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            HttpServletRequest req
+    ) throws IOException {
+        String token = req.getHeader(HttpHeaders.AUTHORIZATION);
+        String username = jwtService.extractUsername(token);
+        return fileService.updateFileOnlyFile(id, file, username);
+    }
+
+
+
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping
