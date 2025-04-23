@@ -79,7 +79,7 @@ public class FileController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')") // ou ajuste conforme quem deve poder acessar
+    @PreAuthorize("isAuthenticated()")
     public List<FileResponse> getByUserId(@PathVariable Long userId) {
         return fileService.getByUser(userId);
     }
