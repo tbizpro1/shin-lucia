@@ -26,8 +26,9 @@ public class FileController {
     private final UserClient userClient;
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/idea/{ideaId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FileResponse uploadFile(
+            @PathVariable Long ideaId,
             @RequestPart("data") FileRequest request,
             @RequestPart("file") MultipartFile file,
             HttpServletRequest req
@@ -35,7 +36,8 @@ public class FileController {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
         Long userId = userClient.findIdByUsername(username);
-        return fileService.uploadFile(request, file, username, userId);
+        request.setIdeaId(ideaId);
+        return fileService.uploadFile(request, file, userId);
     }
 
     @PutMapping("/{id}/data")
@@ -47,41 +49,56 @@ public class FileController {
         return fileService.updateFileData(id, request);
     }
 
-    @PutMapping("/{id}/only-file")
+    @PutMapping("/{id}/idea/{ideaId}/only-file")
     @PreAuthorize("isAuthenticated()")
     public FileResponse updateOnlyFile(
             @PathVariable Long id,
+            @PathVariable Long ideaId,
             @RequestPart("file") MultipartFile file,
             HttpServletRequest req
     ) throws IOException {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
-        return fileService.updateFileOnlyFile(id, file, username);
+        Long userId = userClient.findIdByUsername(username);
+        return fileService.updateFileOnlyFile(id, file, userId, ideaId);
     }
 
-
-
-
+    @GetMapping("/my-documents")
     @PreAuthorize("isAuthenticated()")
-    @GetMapping
-    public List<FileResponse> listAll(HttpServletRequest req) {
+    public List<FileResponse> listMyDocuments(HttpServletRequest req) {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
         Long userId = userClient.findIdByUsername(username);
         return fileService.getByUser(userId);
     }
 
+    @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/step/{step}")
-    public List<FileResponse> listByStep(@PathVariable Double step, HttpServletRequest req) {
-        String token = req.getHeader(HttpHeaders.AUTHORIZATION);
-        String username = jwtService.extractUsername(token);
-        Long userId = userClient.findIdByUsername(username);
-        return fileService.getByUserAndStep(userId, step);
+    public FileResponse getById(@PathVariable Long id) {
+        return fileService.getById(id);
     }
 
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')") // ou ajuste conforme quem deve poder acessar
+    public List<FileResponse> getByUserId(@PathVariable Long userId) {
+        return fileService.getByUser(userId);
+    }
+
+    @GetMapping("/idea/{ideaId}")
     @PreAuthorize("isAuthenticated()")
+    public List<FileResponse> getByIdeaId(@PathVariable Long ideaId) {
+        return fileService.getByIdeaId(ideaId);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<FileResponse> getAll() {
+        return fileService.getAllFiles();
+    }
+
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public void delete(@PathVariable Long id) {
         fileService.delete(id);
     }

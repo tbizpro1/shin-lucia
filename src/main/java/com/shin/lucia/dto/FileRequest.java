@@ -14,6 +14,6 @@ public class FileRequest {
     private String fileUrl;
     private String type;
     private String author;
-    private Double step;
     private String name;
+    private Long ideaId;
 }

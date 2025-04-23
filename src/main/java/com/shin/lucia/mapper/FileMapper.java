@@ -8,14 +8,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class FileMapper {
 
-    public File toEntity(FileRequest request, Long userId) {
+    public File toEntity(FileRequest request) {
         return File.builder()
-                .fileUrl(request.getFileUrl())
+                .fileUrl(null)
                 .type(request.getType())
                 .author(request.getAuthor())
-                .step(request.getStep())
                 .name(request.getName())
-                .userId(userId)
+                .ideaId(request.getIdeaId())
                 .build();
     }
 
@@ -25,11 +24,13 @@ public class FileMapper {
                 .fileUrl(file.getFileUrl())
                 .type(file.getType())
                 .author(file.getAuthor())
-                .step(file.getStep())
-                .name(file.getName())
+                .ideaId(file.getIdeaId())
                 .userId(file.getUserId())
                 .createdAt(file.getCreatedAt())
                 .updatedAt(file.getUpdatedAt())
+                .name(file.getName())
+                .ideaId(file.getIdeaId())
                 .build();
     }
+
 }

@@ -17,9 +17,9 @@ public class FileResponse {
     private String fileUrl;
     private String type;
     private String author;
-    private Double step;
     private String name;
     private Long userId;
+    private Long ideaId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

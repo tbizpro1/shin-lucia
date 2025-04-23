@@ -26,19 +26,16 @@ public class FileService {
     private final FileMapper mapper;
 
     @Transactional
-    public FileResponse uploadFile(FileRequest request, MultipartFile file, String username, Long userId) throws IOException {
+    public FileResponse uploadFile(FileRequest request, MultipartFile file, Long userId) throws IOException {
         try {
-            String stepFolder = "step-" + String.valueOf(request.getStep()).replace(".", "-");
-
-            String fileUrl = s3StorageService.uploadLuciaFileStep(file, username, stepFolder);
-
+            String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, request.getIdeaId());
 
             File fileEntity = File.builder()
                     .fileUrl(fileUrl)
                     .type(request.getType())
                     .author(request.getAuthor())
-                    .step(request.getStep())
                     .name(file.getOriginalFilename())
+                    .ideaId(request.getIdeaId())
                     .userId(userId)
                     .build();
 
@@ -49,6 +46,7 @@ public class FileService {
         }
     }
 
+
     @Transactional
     public List<FileResponse> getByUser(Long userId) {
         return repository.findAllByUserId(userId)
@@ -57,13 +55,13 @@ public class FileService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public List<FileResponse> getByUserAndStep(Long userId, Double step) {
-        return repository.findAllByUserIdAndStep(userId, step)
-                .stream()
-                .map(mapper::toResponse)
-                .collect(Collectors.toList());
+    @Transactional(readOnly = true)
+    public FileResponse getById(Long id) {
+        File file = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
+        return mapper.toResponse(file);
     }
+
 
     @Transactional
     public FileResponse updateFileData(Long id, FileRequest request) {
@@ -71,7 +69,6 @@ public class FileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
 
         file.setAuthor(request.getAuthor());
-        file.setStep(request.getStep());
         file.setType(request.getType());
         file.setName(request.getName());
 
@@ -79,19 +76,35 @@ public class FileService {
     }
 
     @Transactional
-    public FileResponse updateFileOnlyFile(Long id, MultipartFile file, String username) throws IOException {
+    public FileResponse updateFileOnlyFile(Long id, MultipartFile file, Long userId, Long ideaId) throws IOException {
         File fileEntity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
 
         s3StorageService.deleteFile(fileEntity.getFileUrl());
 
-        String stepFolder = "step-" + String.valueOf(fileEntity.getStep()).replace(".", "-");
-        String fileUrl = s3StorageService.uploadLuciaFileStep(file, username, stepFolder);
+        String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, ideaId);
 
         fileEntity.setFileUrl(fileUrl);
         fileEntity.setName(file.getOriginalFilename());
+        fileEntity.setIdeaId(ideaId);
 
         return mapper.toResponse(repository.save(fileEntity));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getByIdeaId(Long ideaId) {
+        return repository.findAllByIdeaId(ideaId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getAllFiles() {
+        return repository.findAll()
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
     }
 
 

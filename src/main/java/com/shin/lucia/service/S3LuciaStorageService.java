@@ -11,7 +11,6 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.UUID;
 
 @Slf4j
@@ -39,45 +38,6 @@ public class S3LuciaStorageService {
                 .getUrl(b -> b
                         .bucket(awsProperties.getS3().getBucket())
                         .key(fileName))
-                .toString();
-    }
-
-
-    public String uploadLuciaFileStep(MultipartFile file, String username, String stepFolder) throws IOException {
-        String sanitizedStep = sanitizeForS3Path(stepFolder);
-        String fileName = String.format("lucia/files/%s/%s/%s", username, sanitizedStep, generateFileName(file.getOriginalFilename()));
-
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(awsProperties.getS3().getBucket())
-                .key(fileName)
-                .contentType(file.getContentType())
-                .build();
-
-        s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
-
-        return s3Client.utilities()
-                .getUrl(b -> b
-                        .bucket(awsProperties.getS3().getBucket())
-                        .key(fileName))
-                .toString();
-    }
-
-    public String uploadLuciaGeneratedFile(byte[] content, String fileName, String username, String folder, String ideaTitle) {
-        String sanitizedTitle = sanitizeForS3Path(ideaTitle);
-        String key = String.format("lucia/%s/%s/%s/%s", folder, username, sanitizedTitle, fileName);
-
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(awsProperties.getS3().getBucket())
-                .key(key)
-                .contentType("text/plain")
-                .build();
-
-        s3Client.putObject(request, RequestBody.fromBytes(content));
-
-        return s3Client.utilities()
-                .getUrl(b -> b
-                        .bucket(awsProperties.getS3().getBucket())
-                        .key(key))
                 .toString();
     }
 
@@ -152,6 +112,22 @@ public class S3LuciaStorageService {
         }
     }
 
+    public String uploadLuciaFileByIdea(MultipartFile file, Long userId, Long ideaId) throws IOException {
+        String fileName = String.format("lucia/files/%d/%d/%s", userId, ideaId, generateFileName(file.getOriginalFilename()));
+
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(awsProperties.getS3().getBucket())
+                .key(fileName)
+                .contentType(file.getContentType())
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+
+        return s3Client.utilities()
+                .getUrl(b -> b.bucket(awsProperties.getS3().getBucket()).key(fileName))
+                .toString();
+
+    }
 
 
     private String generateFileName(String originalName) {

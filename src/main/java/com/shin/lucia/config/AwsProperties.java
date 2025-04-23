@@ -16,5 +16,6 @@ public class AwsProperties {
     public static class S3 {
         private String region;
         private String bucket;
+
     }
 }

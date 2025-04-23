@@ -33,7 +33,8 @@ public class File {
 
     private String author;
 
-    private Double step;
-
     private String name;
+
+    @Column(nullable = false)
+    private Long ideaId;
 }
