@@ -1,34 +1,37 @@
 package com.shin.lucia.mapper;
 
-import com.shin.lucia.dto.LuciaResponseRequest;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shin.lucia.dto.LuciaResponseResponse;
-import com.shin.lucia.entity.LuciaIdea;
 import com.shin.lucia.entity.LuciaResponse;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class LuciaResponseMapper {
 
-    public static LuciaResponse toEntity(LuciaResponseRequest request, LuciaIdea idea) {
-        return LuciaResponse.builder()
-                .relatedStep(request.getRelatedStep())
-                .content(request.getContent())
-                .author(request.getAuthor())
-                .urlHistory(request.getUrlHistory())
-                .objectName(request.getObjectName())
-                .idea(idea)
-                .build();
-    }
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    public static LuciaResponseResponse toResponse(LuciaResponse response) {
+    public static LuciaResponseResponse toResponse(LuciaResponse entity) {
+        List<Map<String, Object>> contentList;
+
+        try {
+            contentList = mapper.readValue(entity.getContent(), new TypeReference<>() {});
+        } catch (Exception e) {
+            contentList = Collections.emptyList();
+        }
+
         return LuciaResponseResponse.builder()
-                .id(response.getId())
-                .relatedStep(response.getRelatedStep())
-                .content(response.getContent())
-                .author(response.getAuthor())
-                .urlHistory(response.getUrlHistory())
-                .objectName(response.getObjectName())
-                .ideaId(response.getIdea().getId())
-                .createdAt(response.getCreatedAt())
-                .updatedAt(response.getUpdatedAt())
+                .id(entity.getId())
+                .relatedStep(entity.getRelatedStep())
+                .content(contentList)
+                .author(entity.getAuthor())
+                .urlHistory(entity.getUrlHistory())
+                .objectName(entity.getObjectName())
+                .ideaId(entity.getIdea().getId())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 }

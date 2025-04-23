@@ -29,13 +29,14 @@ public class LuciaResponseController {
     public LuciaResponseResponse uploadStepResponseAsText(
             @PathVariable Long ideaId,
             @PathVariable Double step,
-            @RequestBody Map<String, Object> data,
+            @RequestBody List<Map<String, Object>> data,
             HttpServletRequest request
     ) throws IOException {
         String token = request.getHeader(HttpHeaders.AUTHORIZATION);
         String username = jwtService.extractUsername(token);
         return responseService.uploadResponseAsTxt(ideaId, step, data, username);
     }
+
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")

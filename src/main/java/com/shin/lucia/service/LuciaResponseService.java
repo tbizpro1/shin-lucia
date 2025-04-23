@@ -1,5 +1,6 @@
 package com.shin.lucia.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shin.lucia.client.UserClient;
 import com.shin.lucia.dto.LuciaResponseResponse;
 import com.shin.lucia.entity.LuciaIdea;
@@ -30,16 +31,16 @@ public class LuciaResponseService {
 
 
     @Transactional
-    public LuciaResponseResponse uploadResponseAsTxt(Long ideaId, Double step, Map<String, Object> data, String username) {
+    public LuciaResponseResponse uploadResponseAsTxt(Long ideaId, Double step, List<Map<String, Object>> data, String username) {
         try {
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
-
             Long userId = userClient.findIdByUsername(username);
 
+            ObjectMapper mapper = new ObjectMapper();
+            String content = mapper.writeValueAsString(data);
 
-            String content = data.toString();
             String fileName = "step-" + step + ".txt";
             byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
 
@@ -52,11 +53,14 @@ public class LuciaResponseService {
             String fileUrl = s3StorageService.uploadLuciaResponseFile(contentBytes, fileName, userId, ideaId);
 
             LuciaResponse response = repository.findByIdeaAndRelatedStep(idea, step)
-                    .orElseGet(() -> LuciaResponse.builder().idea(idea).relatedStep(step).build());
+                    .orElseGet(() -> LuciaResponse.builder()
+                            .idea(idea)
+                            .relatedStep(step)
+                            .build());
 
             response.setUrlHistory(fileUrl);
             response.setObjectName(fileName);
-            response.setContent(content);
+            response.setContent(content); // JSON como String
             response.setAuthor(username);
 
             return LuciaResponseMapper.toResponse(repository.save(response));
@@ -66,6 +70,7 @@ public class LuciaResponseService {
             throw new RuntimeException("Erro ao salvar resposta");
         }
     }
+
 
     @Transactional
     public void delete(Long id) {
