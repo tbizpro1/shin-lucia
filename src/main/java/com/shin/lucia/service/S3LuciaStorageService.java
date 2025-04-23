@@ -2,6 +2,7 @@ package com.shin.lucia.service;
 
 import com.shin.lucia.config.AwsProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class S3LuciaStorageService {
@@ -115,6 +117,41 @@ public class S3LuciaStorageService {
             throw new RuntimeException("Erro ao deletar arquivo do S3: " + fileUrl, e);
         }
     }
+
+    public String uploadLuciaJsonSummary(byte[] content, Long userId, Long ideaId) {
+        String key = String.format("lucia/summary/%d/%d/summary.json", userId, ideaId);
+
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(awsProperties.getS3().getBucket())
+                .key(key)
+                .contentType("application/json")
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromBytes(content));
+
+        return s3Client.utilities()
+                .getUrl(b -> b.bucket(awsProperties.getS3().getBucket()).key(key))
+                .toString();
+    }
+
+    public byte[] readSummaryJson(Long userId, Long ideaId) {
+        try {
+            String key = String.format("lucia/summary/%d/%d/summary.json", userId, ideaId);
+            log.info("📥 Baixando arquivo S3 com key: {}", key);
+
+            try (var s3Object = s3Client.getObject(b -> b
+                    .bucket(awsProperties.getS3().getBucket())
+                    .key(key))) {
+
+                return s3Object.readAllBytes();
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Erro ao baixar arquivo do S3: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao baixar conteúdo JSON do S3", e);
+        }
+    }
+
 
 
     private String generateFileName(String originalName) {
