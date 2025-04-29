@@ -114,8 +114,8 @@ public class S3LuciaStorageService {
     }
 
 
-    public String uploadLuciaFileByIdea(MultipartFile file, Long userId, Long ideaId) throws IOException {
-        String fileName = String.format("lucia/files/%d/%d/%s", userId, ideaId, generateFileName(file.getOriginalFilename()));
+    public String uploadLuciaFileByIdea(MultipartFile file, Long ideaId) throws IOException {
+        String fileName = String.format("lucia/files/%d/%s", ideaId, file.getOriginalFilename());
 
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(awsProperties.getS3().getBucket())
@@ -128,8 +128,8 @@ public class S3LuciaStorageService {
         return s3Client.utilities()
                 .getUrl(b -> b.bucket(awsProperties.getS3().getBucket()).key(fileName))
                 .toString();
-
     }
+
 
 
     private String generateFileName(String originalName) {

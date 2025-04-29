@@ -28,7 +28,7 @@ public class FileService {
     @Transactional
     public FileResponse uploadFile(FileRequest request, MultipartFile file, Long userId) throws IOException {
         try {
-            String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, request.getIdeaId());
+            String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, request.getIdeaId());
 
             File fileEntity = File.builder()
                     .fileUrl(fileUrl)
@@ -45,6 +45,7 @@ public class FileService {
             throw new RuntimeException("Erro ao enviar arquivo");
         }
     }
+
 
 
     @Transactional
@@ -82,7 +83,7 @@ public class FileService {
 
         s3StorageService.deleteFile(fileEntity.getFileUrl());
 
-        String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, ideaId);
+        String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, ideaId);
 
         fileEntity.setFileUrl(fileUrl);
         fileEntity.setName(file.getOriginalFilename());
@@ -90,6 +91,7 @@ public class FileService {
 
         return mapper.toResponse(repository.save(fileEntity));
     }
+
 
     @Transactional(readOnly = true)
     public List<FileResponse> getByIdeaId(Long ideaId) {
@@ -106,9 +108,6 @@ public class FileService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
     }
-
-
-
 
     @Transactional
     public void delete(Long id) {
