@@ -71,9 +71,10 @@ public class LuciaSummaryService {
             LuciaSummaryIdeas summary = repository.findByIdea(idea)
                     .orElseGet(() -> LuciaSummaryIdeas.builder().idea(idea).build());
 
-            s3StorageService.deleteFile(summary.getUrlFile()); // só se existir
+            s3StorageService.deleteFile(summary.getUrlFile());
 
-            String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, userId, ideaId);
+            String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, ideaId);
+
 
             summary.setObjectName("summary.json");
             summary.setUrlFile(fileUrl);
@@ -100,7 +101,7 @@ public class LuciaSummaryService {
             Long userId = userClient.findIdByUsername(username);
             byte[] contentBytes = objectMapper.writeValueAsBytes(steps);
 
-            String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, userId, ideaId);
+            String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, ideaId);
 
             LuciaSummaryIdeas summary = LuciaSummaryIdeas.builder()
                     .idea(idea)
@@ -142,7 +143,7 @@ public class LuciaSummaryService {
 
             Long userId = idea.getUserId();
 
-            byte[] jsonBytes = s3StorageService.readSummaryJson(userId, ideaId);
+            byte[] jsonBytes = s3StorageService.readSummaryJson(ideaId);
             Map<String, String> contentMap = objectMapper.readValue(jsonBytes, new TypeReference<>() {});
 
             LuciaSummaryResponse response = LuciaSummaryMapper.toResponse(summary);

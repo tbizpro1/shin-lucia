@@ -78,8 +78,8 @@ public class S3LuciaStorageService {
         }
     }
 
-    public String uploadLuciaJsonSummary(byte[] content, Long userId, Long ideaId) {
-        String key = String.format("lucia/summary/%d/%d/summary.json", userId, ideaId);
+    public String uploadLuciaJsonSummary(byte[] content, Long ideaId) {
+        String key = String.format("lucia/summary/%d/summary.json", ideaId);
 
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(awsProperties.getS3().getBucket())
@@ -94,9 +94,10 @@ public class S3LuciaStorageService {
                 .toString();
     }
 
-    public byte[] readSummaryJson(Long userId, Long ideaId) {
+
+    public byte[] readSummaryJson(Long ideaId) {
         try {
-            String key = String.format("lucia/summary/%d/%d/summary.json", userId, ideaId);
+            String key = String.format("lucia/summary/%d/summary.json", ideaId); // apenas o ideaId agora
             log.info("📥 Baixando arquivo S3 com key: {}", key);
 
             try (var s3Object = s3Client.getObject(b -> b
@@ -111,6 +112,7 @@ public class S3LuciaStorageService {
             throw new RuntimeException("Erro ao baixar conteúdo JSON do S3", e);
         }
     }
+
 
     public String uploadLuciaFileByIdea(MultipartFile file, Long userId, Long ideaId) throws IOException {
         String fileName = String.format("lucia/files/%d/%d/%s", userId, ideaId, generateFileName(file.getOriginalFilename()));
