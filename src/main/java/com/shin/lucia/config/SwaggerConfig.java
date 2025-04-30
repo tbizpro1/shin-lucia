@@ -1,4 +1,4 @@
-package com.shin.users.config;
+package com.shin.lucia.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
