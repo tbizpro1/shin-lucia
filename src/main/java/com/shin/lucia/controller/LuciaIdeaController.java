@@ -1,6 +1,6 @@
 package com.shin.lucia.controller;
 
-import com.shin.lucia.client.UserClient;
+import com.shin.lucia.client.CompanyClient;
 import com.shin.lucia.dto.LuciaIdeaRequest;
 import com.shin.lucia.dto.LuciaIdeaResponse;
 import com.shin.lucia.security.JwtService;
@@ -12,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/lucia/ideas")
@@ -21,15 +20,14 @@ public class LuciaIdeaController {
 
     private final LuciaIdeaService ideaService;
     private final JwtService jwtService;
-    private final UserClient userClient;
+    private final CompanyClient companyClient;
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping
     public LuciaIdeaResponse create(@RequestBody LuciaIdeaRequest request, HttpServletRequest req) {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
-        String username = jwtService.extractUsername(token);
-        Long userId = userClient.findIdByUsername(username);
-        return ideaService.create(request, userId);
+        Long companyId = companyClient.getMyCompanyId(token);
+        return ideaService.create(request, companyId);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -39,12 +37,11 @@ public class LuciaIdeaController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/user")
-    public List<LuciaIdeaResponse> getByUser(HttpServletRequest req) {
+    @GetMapping("/company")
+    public List<LuciaIdeaResponse> getByCompany(HttpServletRequest req) {
         String token = req.getHeader(HttpHeaders.AUTHORIZATION);
-        String username = jwtService.extractUsername(token);
-        Long userId = userClient.findIdByUsername(username);
-        return ideaService.getByUserId(userId);
+        Long companyId = companyClient.getMyCompanyId(token);
+        return ideaService.getByCompanyId(companyId);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -58,5 +55,4 @@ public class LuciaIdeaController {
     public void delete(@PathVariable Long id) {
         ideaService.delete(id);
     }
-
 }

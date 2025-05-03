@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class LuciaIdeaResponse {
 
     private Long id;
-    private Long userId;
+    private Long companyId;
     private String title;
     private String description;
     private Double step;

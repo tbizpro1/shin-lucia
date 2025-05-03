@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface LuciaIdeaRepository extends JpaRepository<LuciaIdea, Long> {
 
-    List<LuciaIdea> findByUserId(Long userId);
+    List<LuciaIdea> findByCompanyId(Long companyId);
 }
