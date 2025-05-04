@@ -31,6 +31,13 @@ public class LuciaIdeaController {
     }
 
     @PreAuthorize("isAuthenticated()")
+    @GetMapping("/by-company/{companyId}")
+    public List<LuciaIdeaResponse> getByCompanyId(@PathVariable Long companyId) {
+        return ideaService.getByCompanyId(companyId);
+    }
+
+
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public LuciaIdeaResponse getById(@PathVariable Long id) {
         return ideaService.getById(id);
