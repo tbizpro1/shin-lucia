@@ -26,11 +26,12 @@ public class FileMapper {
                 .author(file.getAuthor())
                 .ideaId(file.getIdeaId())
                 .userId(file.getUserId())
+                .companyId(file.getCompanyId())
                 .createdAt(file.getCreatedAt())
                 .updatedAt(file.getUpdatedAt())
                 .name(file.getName())
-                .ideaId(file.getIdeaId())
                 .build();
     }
+
 
 }

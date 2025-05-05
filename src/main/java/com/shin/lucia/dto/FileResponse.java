@@ -15,6 +15,7 @@ public class FileResponse {
 
     private Long id;
     private String fileUrl;
+    private Long companyId;
     private String type;
     private String author;
     private String name;
