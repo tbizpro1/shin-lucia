@@ -6,9 +6,9 @@ import com.shin.lucia.entity.LuciaIdea;
 
 public class LuciaIdeaMapper {
 
-    public static LuciaIdea toEntity(LuciaIdeaRequest request, Long userId) {
+    public static LuciaIdea toEntity(LuciaIdeaRequest request, Long companyId) {
         return LuciaIdea.builder()
-                .userId(userId)
+                .companyId(companyId)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .step(request.getStep())
@@ -21,7 +21,7 @@ public class LuciaIdeaMapper {
     public static LuciaIdeaResponse toResponse(LuciaIdea idea) {
         return LuciaIdeaResponse.builder()
                 .id(idea.getId())
-                .userId(idea.getUserId())
+                .companyId(idea.getCompanyId())
                 .title(idea.getTitle())
                 .description(idea.getDescription())
                 .step(idea.getStep())

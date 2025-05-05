@@ -3,9 +3,11 @@ package com.shin.lucia.service;
 import com.shin.lucia.dto.FileRequest;
 import com.shin.lucia.dto.FileResponse;
 import com.shin.lucia.entity.File;
+import com.shin.lucia.entity.LuciaIdea;
 import com.shin.lucia.exception.ResourceNotFoundException;
 import com.shin.lucia.mapper.FileMapper;
 import com.shin.lucia.repository.FileRepository;
+import com.shin.lucia.repository.LuciaIdeaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,20 +25,23 @@ public class FileService {
 
     private final S3LuciaStorageService s3StorageService;
     private final FileRepository repository;
+    private final LuciaIdeaRepository ideaRepository;
     private final FileMapper mapper;
 
     @Transactional
-    public FileResponse uploadFile(FileRequest request, MultipartFile file, Long userId) throws IOException {
+    public FileResponse uploadFile(FileRequest request, MultipartFile file) throws IOException {
         try {
-            String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, request.getIdeaId());
+            LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ideia não encontrada para ID: " + request.getIdeaId()));
+
+            String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, idea.getCompanyId(), idea.getId());
 
             File fileEntity = File.builder()
                     .fileUrl(fileUrl)
                     .type(request.getType())
                     .author(request.getAuthor())
                     .name(file.getOriginalFilename())
-                    .ideaId(request.getIdeaId())
-                    .userId(userId)
+                    .ideaId(idea.getId())
                     .build();
 
             return mapper.toResponse(repository.save(fileEntity));
@@ -44,51 +49,6 @@ public class FileService {
             log.error("Erro ao fazer upload de arquivo: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao enviar arquivo");
         }
-    }
-
-
-    @Transactional
-    public List<FileResponse> getByUser(Long userId) {
-        return repository.findAllByUserId(userId)
-                .stream()
-                .map(mapper::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public FileResponse getById(Long id) {
-        File file = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
-        return mapper.toResponse(file);
-    }
-
-
-    @Transactional
-    public FileResponse updateFileData(Long id, FileRequest request) {
-        File file = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
-
-        file.setAuthor(request.getAuthor());
-        file.setType(request.getType());
-        file.setName(request.getName());
-
-        return mapper.toResponse(repository.save(file));
-    }
-
-    @Transactional
-    public FileResponse updateFileOnlyFile(Long id, MultipartFile file, Long userId, Long ideaId) throws IOException {
-        File fileEntity = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
-
-        s3StorageService.deleteFile(fileEntity.getFileUrl());
-
-        String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, userId, ideaId);
-
-        fileEntity.setFileUrl(fileUrl);
-        fileEntity.setName(file.getOriginalFilename());
-        fileEntity.setIdeaId(ideaId);
-
-        return mapper.toResponse(repository.save(fileEntity));
     }
 
     @Transactional(readOnly = true)
@@ -107,8 +67,42 @@ public class FileService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public FileResponse getById(Long id) {
+        File file = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
+        return mapper.toResponse(file);
+    }
 
+    @Transactional
+    public FileResponse updateFileData(Long id, FileRequest request) {
+        File file = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
 
+        file.setAuthor(request.getAuthor());
+        file.setType(request.getType());
+        file.setName(request.getName());
+
+        return mapper.toResponse(repository.save(file));
+    }
+
+    @Transactional
+    public FileResponse updateFileOnlyFile(Long id, MultipartFile file) throws IOException {
+        File fileEntity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Arquivo não encontrado para ID: " + id));
+
+        LuciaIdea idea = ideaRepository.findById(fileEntity.getIdeaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ideia não encontrada para ID: " + fileEntity.getIdeaId()));
+
+        s3StorageService.deleteFile(fileEntity.getFileUrl());
+
+        String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, idea.getCompanyId(), idea.getId());
+
+        fileEntity.setFileUrl(fileUrl);
+        fileEntity.setName(file.getOriginalFilename());
+
+        return mapper.toResponse(repository.save(fileEntity));
+    }
 
     @Transactional
     public void delete(Long id) {
@@ -123,5 +117,4 @@ public class FileService {
 
         repository.delete(file);
     }
-
 }

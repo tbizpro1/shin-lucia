@@ -8,6 +8,7 @@ import com.shin.lucia.repository.LuciaIdeaRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,23 +18,27 @@ public class LuciaIdeaService {
 
     private final LuciaIdeaRepository repository;
 
-    public LuciaIdeaResponse create(LuciaIdeaRequest request, Long userId) {
-        LuciaIdea idea = LuciaIdeaMapper.toEntity(request, userId);
+    @Transactional
+    public LuciaIdeaResponse create(LuciaIdeaRequest request, Long companyId) {
+        LuciaIdea idea = LuciaIdeaMapper.toEntity(request, companyId);
         return LuciaIdeaMapper.toResponse(repository.save(idea));
     }
 
+    @Transactional
+    public List<LuciaIdeaResponse> getByCompanyId(Long companyId) {
+        return repository.findByCompanyId(companyId).stream()
+                .map(LuciaIdeaMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional
     public LuciaIdeaResponse getById(Long id) {
         return repository.findById(id)
                 .map(LuciaIdeaMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
     }
 
-    public List<LuciaIdeaResponse> getByUserId(Long userId) {
-        return repository.findByUserId(userId).stream()
-                .map(LuciaIdeaMapper::toResponse)
-                .toList();
-    }
-
+    @Transactional
     public LuciaIdeaResponse update(Long id, LuciaIdeaRequest request) {
         LuciaIdea idea = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
@@ -47,7 +52,7 @@ public class LuciaIdeaService {
 
         return LuciaIdeaMapper.toResponse(repository.save(idea));
     }
-
+    @Transactional
     public void delete(Long id) {
         LuciaIdea idea = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));

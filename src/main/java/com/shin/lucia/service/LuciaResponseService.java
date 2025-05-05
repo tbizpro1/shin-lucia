@@ -1,7 +1,6 @@
 package com.shin.lucia.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shin.lucia.client.UserClient;
 import com.shin.lucia.dto.LuciaResponseResponse;
 import com.shin.lucia.entity.LuciaIdea;
 import com.shin.lucia.entity.LuciaResponse;
@@ -13,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -27,8 +27,6 @@ public class LuciaResponseService {
     private final LuciaResponseRepository repository;
     private final LuciaIdeaRepository ideaRepository;
     private final S3LuciaStorageService s3StorageService;
-    private final UserClient userClient;
-
 
     @Transactional
     public LuciaResponseResponse uploadResponseAsTxt(Long ideaId, Double step, List<Map<String, Object>> data, String username) {
@@ -36,11 +34,8 @@ public class LuciaResponseService {
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
-            Long userId = userClient.findIdByUsername(username);
-
             ObjectMapper mapper = new ObjectMapper();
             String content = mapper.writeValueAsString(data);
-
             String fileName = "step-" + step + ".txt";
             byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
 
@@ -50,7 +45,8 @@ public class LuciaResponseService {
                 }
             });
 
-            String fileUrl = s3StorageService.uploadLuciaResponseFile(contentBytes, fileName, userId, ideaId);
+            Long companyId = idea.getCompanyId();
+            String fileUrl = s3StorageService.uploadLuciaResponseFile(contentBytes, fileName, companyId, ideaId);
 
             LuciaResponse response = repository.findByIdeaAndRelatedStep(idea, step)
                     .orElseGet(() -> LuciaResponse.builder()
@@ -71,7 +67,6 @@ public class LuciaResponseService {
         }
     }
 
-
     @Transactional
     public void delete(Long id) {
         try {
@@ -86,6 +81,7 @@ public class LuciaResponseService {
         }
     }
 
+    @Transactional(readOnly = true)
     public LuciaResponseResponse getById(Long id) {
         try {
             return repository.findById(id)
@@ -97,6 +93,7 @@ public class LuciaResponseService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<LuciaResponseResponse> getByIdeaId(Long ideaId) {
         try {
             LuciaIdea idea = ideaRepository.findById(ideaId)
@@ -111,6 +108,7 @@ public class LuciaResponseService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Map<Double, String> getStepSummaries(Long ideaId) {
         try {
             return repository.findAllByIdea_Id(ideaId).stream()

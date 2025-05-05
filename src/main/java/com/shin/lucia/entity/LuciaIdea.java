@@ -20,8 +20,8 @@ public class LuciaIdea {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
     @Column(nullable = false)
     private String title;

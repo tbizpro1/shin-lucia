@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface FileRepository extends JpaRepository<File, Long> {
 
-    List<File> findAllByUserId(Long userId);
     List<File> findAllByIdeaId(Long ideaId);
 
 

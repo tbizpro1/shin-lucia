@@ -1,16 +1,13 @@
 package com.shin.lucia.controller;
 
-import com.shin.lucia.dto.LuciaResponseRequest;
 import com.shin.lucia.dto.LuciaResponseResponse;
 import com.shin.lucia.security.JwtService;
 import com.shin.lucia.service.LuciaResponseService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,7 +33,6 @@ public class LuciaResponseController {
         String username = jwtService.extractUsername(token);
         return responseService.uploadResponseAsTxt(ideaId, step, data, username);
     }
-
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
