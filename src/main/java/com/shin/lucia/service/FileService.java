@@ -126,4 +126,22 @@ public class FileService {
 
         repository.delete(file);
     }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getByUserId(Long userId) {
+        return repository.findAllByUserId(userId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getByCompanyId(Long companyId) {
+        return repository.findAllByCompanyId(companyId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+
 }

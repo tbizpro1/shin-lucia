@@ -73,4 +73,18 @@ public class FileController {
     public void delete(@PathVariable Long id) {
         fileService.delete(id);
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/user/{userId}")
+    public List<FileResponse> getByUserId(@PathVariable Long userId) {
+        return fileService.getByUserId(userId);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/company/{companyId}")
+    public List<FileResponse> getByCompanyId(@PathVariable Long companyId) {
+        return fileService.getByCompanyId(companyId);
+    }
+
+
 }
