@@ -4,6 +4,7 @@ import com.shin.lucia.client.CompanyClient;
 import com.shin.lucia.dto.LuciaIdeaRequest;
 import com.shin.lucia.dto.LuciaIdeaResponse;
 import com.shin.lucia.security.JwtService;
+import com.shin.lucia.service.CompanyService;
 import com.shin.lucia.service.LuciaIdeaService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class LuciaIdeaController {
     private final LuciaIdeaService ideaService;
     private final JwtService jwtService;
     private final CompanyClient companyClient;
+    private final CompanyService companyService;
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping
@@ -46,8 +48,7 @@ public class LuciaIdeaController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/company")
     public List<LuciaIdeaResponse> getByCompany(HttpServletRequest req) {
-        String token = req.getHeader(HttpHeaders.AUTHORIZATION);
-        Long companyId = companyClient.getMyCompanyId(token);
+        Long companyId = companyService.getMyCompanyId(req);
         return ideaService.getByCompanyId(companyId);
     }
 
