@@ -1,5 +1,6 @@
 package com.shin.lucia.service;
 
+import com.shin.lucia.client.UserClient;
 import com.shin.lucia.dto.FileRequest;
 import com.shin.lucia.dto.FileResponse;
 import com.shin.lucia.entity.File;
@@ -10,6 +11,7 @@ import com.shin.lucia.repository.FileRepository;
 import com.shin.lucia.repository.LuciaIdeaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,12 +29,16 @@ public class FileService {
     private final FileRepository repository;
     private final LuciaIdeaRepository ideaRepository;
     private final FileMapper mapper;
+    private final UserClient userClient;
 
     @Transactional
     public FileResponse uploadFile(FileRequest request, MultipartFile file) throws IOException {
         try {
             LuciaIdea idea = ideaRepository.findById(request.getIdeaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Ideia não encontrada para ID: " + request.getIdeaId()));
+
+            String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Long userId = userClient.findIdByUsername(username);
 
             String fileUrl = s3StorageService.uploadLuciaFileByIdea(file, idea.getCompanyId(), idea.getId());
 
@@ -42,6 +48,8 @@ public class FileService {
                     .author(request.getAuthor())
                     .name(file.getOriginalFilename())
                     .ideaId(idea.getId())
+                    .companyId(idea.getCompanyId())
+                    .userId(userId)
                     .build();
 
             return mapper.toResponse(repository.save(fileEntity));
@@ -50,6 +58,7 @@ public class FileService {
             throw new RuntimeException("Erro ao enviar arquivo");
         }
     }
+
 
     @Transactional(readOnly = true)
     public List<FileResponse> getByIdeaId(Long ideaId) {
@@ -117,4 +126,22 @@ public class FileService {
 
         repository.delete(file);
     }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getByUserId(Long userId) {
+        return repository.findAllByUserId(userId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileResponse> getByCompanyId(Long companyId) {
+        return repository.findAllByCompanyId(companyId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+
 }
