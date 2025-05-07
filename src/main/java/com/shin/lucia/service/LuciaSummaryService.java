@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -125,24 +126,47 @@ public class LuciaSummaryService {
     @Transactional(readOnly = true)
     public LuciaSummaryResponse getByIdeaId(Long ideaId) {
         try {
+            log.info("🔍 Buscando ideia com ID: {}", ideaId);
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
+            log.info("🔍 Buscando sumário associado à ideia: {}", ideaId);
             LuciaSummaryIdeas summary = repository.findByIdea(idea)
                     .orElseThrow(() -> new EntityNotFoundException("Sumário não encontrado"));
 
             Long companyId = idea.getCompanyId();
+            log.info("📥 Lendo arquivo JSON do S3 para a ideia: {} da empresa: {}", ideaId, companyId);
 
             byte[] jsonBytes = s3StorageService.readSummaryJson(companyId, ideaId);
-            Map<String, String> contentMap = objectMapper.readValue(jsonBytes, new TypeReference<>() {});
+            if (jsonBytes == null || jsonBytes.length == 0) {
+                log.error("❌ Arquivo JSON está vazio ou não foi encontrado no S3.");
+                throw new RuntimeException("Arquivo JSON não encontrado ou vazio.");
+            }
+
+            Map<String, String> contentMap;
+            try {
+                contentMap = objectMapper.readValue(jsonBytes, new TypeReference<>() {});
+                log.info("✅ Arquivo JSON lido com sucesso.");
+            } catch (IOException e) {
+                log.error("❌ Erro ao converter arquivo JSON para mapa: {}", e.getMessage(), e);
+                throw new RuntimeException("Erro ao converter arquivo JSON para mapa.");
+            }
 
             LuciaSummaryResponse response = LuciaSummaryMapper.toResponse(summary);
             response.setContent(contentMap);
 
+            log.info("✅ Sumário obtido com sucesso para a ideia: {}", ideaId);
             return response;
+        } catch (EntityNotFoundException e) {
+            log.error("❌ Entidade não encontrada: {}", e.getMessage(), e);
+            throw new RuntimeException("Entidade não encontrada: " + e.getMessage());
+        } catch (RuntimeException e) {
+            log.error("❌ Erro ao buscar conteúdo do sumário: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar conteúdo do sumário: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Erro ao buscar conteúdo do sumário da ideia: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao buscar conteúdo do sumário");
+            log.error("❌ Erro inesperado ao buscar sumário: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro inesperado ao buscar sumário");
         }
     }
+
 }
