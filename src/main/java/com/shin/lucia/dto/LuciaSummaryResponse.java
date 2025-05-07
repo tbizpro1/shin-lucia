@@ -13,9 +13,10 @@ import java.util.Map;
 public class LuciaSummaryResponse {
 
     private Long id;
+    private Long companyId;
+    private Long ideaId;
     private String objectName;
     private String urlFile;
-    private Long ideaId;
     private Map<String, String> content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

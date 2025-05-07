@@ -22,32 +22,41 @@ public class LuciaSummaryController {
     private final JwtService jwtService;
 
     @PreAuthorize("isAuthenticated()")
-    @PostMapping("/idea/{ideaId}/upload-json")
+    @PostMapping("/company/{companyId}/idea/{ideaId}/upload-json")
     public LuciaSummaryResponse createSummaryFromJson(
+            @PathVariable Long companyId,
             @PathVariable Long ideaId,
-            @RequestBody Map<String, String> steps
+            @RequestBody Map<String, String> summaryBody
     ) throws IOException {
-        return summaryService.createSummaryFromJson(ideaId, steps);
+        if (summaryBody == null || summaryBody.isEmpty()) {
+            throw new IllegalArgumentException("O corpo da requisição não pode estar vazio.");
+        }
+        return summaryService.createSummaryFromJson(companyId, ideaId, summaryBody);
     }
 
     @PreAuthorize("isAuthenticated()")
-    @PutMapping("/idea/{ideaId}/upload-json")
+    @PutMapping("/company/{companyId}/idea/{ideaId}/upload-json")
     public LuciaSummaryResponse updateSummaryFromJson(
+            @PathVariable Long companyId,
             @PathVariable Long ideaId,
-            @RequestBody Map<String, String> steps
+            @RequestBody Map<String, String> summaryBody
     ) throws IOException {
-        return summaryService.generateAndUploadSummaryFile(ideaId, steps);
+        if (summaryBody == null || summaryBody.isEmpty()) {
+            throw new IllegalArgumentException("O corpo da requisição não pode estar vazio.");
+        }
+        return summaryService.updateSummaryFromJson(companyId, ideaId, summaryBody);
     }
 
-    @PutMapping("/idea/{ideaId}/upload-file")
+
+    @PutMapping("/company/{companyId}/idea/{ideaId}/upload-file")
     @PreAuthorize("isAuthenticated()")
     public LuciaSummaryResponse updateWithFile(
+            @PathVariable Long companyId,
             @PathVariable Long ideaId,
             @RequestPart("file") MultipartFile file
     ) {
-        return summaryService.updateWithFile(ideaId, file);
+        return summaryService.updateWithFile(companyId, ideaId, file);
     }
-
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
@@ -56,8 +65,11 @@ public class LuciaSummaryController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/idea/{ideaId}")
-    public LuciaSummaryResponse getByIdea(@PathVariable Long ideaId) {
-        return summaryService.getByIdeaId(ideaId);
+    @GetMapping("/company/{companyId}/idea/{ideaId}")
+    public LuciaSummaryResponse getByIdea(
+            @PathVariable Long companyId,
+            @PathVariable Long ideaId
+    ) {
+        return summaryService.getByIdeaId(companyId, ideaId);
     }
 }

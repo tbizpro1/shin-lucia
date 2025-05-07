@@ -26,11 +26,10 @@ public class LuciaIdeaController {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping
-    public LuciaIdeaResponse create(@RequestBody LuciaIdeaRequest request, HttpServletRequest req) {
-        String token = req.getHeader(HttpHeaders.AUTHORIZATION);
-        Long companyId = companyClient.getMyCompanyId(token);
-        return ideaService.create(request, companyId);
+    public LuciaIdeaResponse create(@RequestBody LuciaIdeaRequest request) {
+        return ideaService.create(request);
     }
+
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/by-company/{companyId}")

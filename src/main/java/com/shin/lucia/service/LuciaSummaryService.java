@@ -31,7 +31,7 @@ public class LuciaSummaryService {
     private final CompanyClient companyClient;
 
     @Transactional
-    public LuciaSummaryResponse updateWithFile(Long ideaId, MultipartFile file) {
+    public LuciaSummaryResponse updateWithFile(Long companyId, Long ideaId, MultipartFile file) {
         try {
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
@@ -41,32 +41,33 @@ public class LuciaSummaryService {
 
             s3StorageService.deleteFile(summary.getUrlFile());
 
-            Long companyId = idea.getCompanyId();
-            String fileUrl = s3StorageService.uploadLuciaFile(file, companyId, "summaries", ideaId);
+            String fileUrl = s3StorageService.uploadLuciaFile(file, companyId, "summary", ideaId);
 
             summary.setObjectName(file.getOriginalFilename());
             summary.setUrlFile(fileUrl);
+            summary.setIdea(idea);
 
             return LuciaSummaryMapper.toResponse(repository.save(summary));
         } catch (Exception e) {
-            log.error("Erro ao atualizar sumário acumulado: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar sumário acumulado");
+            log.error("Erro ao atualizar sumário com arquivo: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar sumário com arquivo");
         }
     }
 
-
     @Transactional
-    public LuciaSummaryResponse generateAndUploadSummaryFile(Long ideaId, Map<String, String> steps) {
+    public LuciaSummaryResponse updateSummaryFromJson(Long companyId, Long ideaId, Map<String, String> steps) {
         try {
+            if (steps == null || steps.isEmpty()) {
+                throw new IllegalArgumentException("Resumo não pode estar vazio ou nulo.");
+            }
+
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
-
-            byte[] contentBytes = objectMapper.writeValueAsBytes(steps);
-            Long companyId = idea.getCompanyId();
 
             LuciaSummaryIdeas summary = repository.findByIdea(idea)
                     .orElseGet(() -> LuciaSummaryIdeas.builder().idea(idea).build());
 
+            byte[] contentBytes = objectMapper.writeValueAsBytes(steps);
             s3StorageService.deleteFile(summary.getUrlFile());
 
             String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, companyId, ideaId);
@@ -81,9 +82,14 @@ public class LuciaSummaryService {
         }
     }
 
+
     @Transactional
-    public LuciaSummaryResponse createSummaryFromJson(Long ideaId, Map<String, String> steps) {
+    public LuciaSummaryResponse createSummaryFromJson(Long companyId, Long ideaId, Map<String, String> steps) {
         try {
+            if (steps == null || steps.isEmpty()) {
+                throw new IllegalArgumentException("Resumo não pode estar vazio ou nulo.");
+            }
+
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
@@ -92,8 +98,6 @@ public class LuciaSummaryService {
             }
 
             byte[] contentBytes = objectMapper.writeValueAsBytes(steps);
-            Long companyId = idea.getCompanyId();
-
             String fileUrl = s3StorageService.uploadLuciaJsonSummary(contentBytes, companyId, ideaId);
 
             LuciaSummaryIdeas summary = LuciaSummaryIdeas.builder()
@@ -108,6 +112,8 @@ public class LuciaSummaryService {
             throw new RuntimeException("Erro ao criar resumo com JSON");
         }
     }
+
+
 
     @Transactional
     public void delete(Long id) {
@@ -124,49 +130,24 @@ public class LuciaSummaryService {
     }
 
     @Transactional(readOnly = true)
-    public LuciaSummaryResponse getByIdeaId(Long ideaId) {
+    public LuciaSummaryResponse getByIdeaId(Long companyId, Long ideaId) {
         try {
-            log.info("🔍 Buscando ideia com ID: {}", ideaId);
             LuciaIdea idea = ideaRepository.findById(ideaId)
                     .orElseThrow(() -> new EntityNotFoundException("Ideia não encontrada"));
 
-            log.info("🔍 Buscando sumário associado à ideia: {}", ideaId);
             LuciaSummaryIdeas summary = repository.findByIdea(idea)
                     .orElseThrow(() -> new EntityNotFoundException("Sumário não encontrado"));
 
-            Long companyId = idea.getCompanyId();
-            log.info("📥 Lendo arquivo JSON do S3 para a ideia: {} da empresa: {}", ideaId, companyId);
-
             byte[] jsonBytes = s3StorageService.readSummaryJson(companyId, ideaId);
-            if (jsonBytes == null || jsonBytes.length == 0) {
-                log.error("❌ Arquivo JSON está vazio ou não foi encontrado no S3.");
-                throw new RuntimeException("Arquivo JSON não encontrado ou vazio.");
-            }
-
-            Map<String, String> contentMap;
-            try {
-                contentMap = objectMapper.readValue(jsonBytes, new TypeReference<>() {});
-                log.info("✅ Arquivo JSON lido com sucesso.");
-            } catch (IOException e) {
-                log.error("❌ Erro ao converter arquivo JSON para mapa: {}", e.getMessage(), e);
-                throw new RuntimeException("Erro ao converter arquivo JSON para mapa.");
-            }
+            Map<String, String> contentMap = objectMapper.readValue(jsonBytes, new TypeReference<>() {});
 
             LuciaSummaryResponse response = LuciaSummaryMapper.toResponse(summary);
             response.setContent(contentMap);
 
-            log.info("✅ Sumário obtido com sucesso para a ideia: {}", ideaId);
             return response;
-        } catch (EntityNotFoundException e) {
-            log.error("❌ Entidade não encontrada: {}", e.getMessage(), e);
-            throw new RuntimeException("Entidade não encontrada: " + e.getMessage());
-        } catch (RuntimeException e) {
-            log.error("❌ Erro ao buscar conteúdo do sumário: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao buscar conteúdo do sumário: " + e.getMessage());
         } catch (Exception e) {
-            log.error("❌ Erro inesperado ao buscar sumário: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro inesperado ao buscar sumário");
+            log.error("Erro ao buscar sumário: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar sumário");
         }
     }
-
 }

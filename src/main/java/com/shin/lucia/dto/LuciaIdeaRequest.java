@@ -9,6 +9,7 @@ import lombok.*;
 @Builder
 public class LuciaIdeaRequest {
 
+    private Long companyId;
     private String title;
     private String description;
     private Double step;
