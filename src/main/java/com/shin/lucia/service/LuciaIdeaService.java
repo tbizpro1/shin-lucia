@@ -20,6 +20,27 @@ public class LuciaIdeaService {
 
     @Transactional
     public LuciaIdeaResponse create(LuciaIdeaRequest request, Long companyId) {
+//        private String title;
+//        private String description;
+//        private Double step;
+//        private String problem;
+//        private String solution;
+//        private String whoIs;
+        if (request.getTitle() == null || request.getDescription() == null) {
+            throw new IllegalArgumentException("Título e descrição são obrigatórios");
+        }
+        if (request.getStep() == null) {
+            throw new IllegalArgumentException("Etapa é obrigatória");
+        }
+        if (request.getProblem() == null) {
+            throw new IllegalArgumentException("Problema é obrigatório");
+        }
+        if (request.getSolution() == null) {
+            throw new IllegalArgumentException("Solução é obrigatória");
+        }
+        if (request.getWhoIs() == null) {
+            throw new IllegalArgumentException("Quem é obrigatório");
+        }
         LuciaIdea idea = LuciaIdeaMapper.toEntity(request, companyId);
         return LuciaIdeaMapper.toResponse(repository.save(idea));
     }
